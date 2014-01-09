@@ -104,7 +104,7 @@ static void  TCPServer(){
         perror("ACCEPT");
         continue;
     }
-    printf("remote peer:%s\n",inet_ntop(AF_INET,(void*)&addr_peer,&peeraddr,sizeof(peeraddr)));
+    printf("remote peer:%s\n",inet_ntoa(addr_peer.sin_addr));
     while(1){
      n=read(connfd,data,sizeof(data));
      data[n]='\0';
