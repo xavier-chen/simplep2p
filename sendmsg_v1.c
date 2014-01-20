@@ -22,17 +22,16 @@ static struct app_t
     int lport;
     char lipaddr[PJ_INET6_ADDRSTRLEN]; 
     int localfd;
-
-   struct sockaddr_in addr_server,addr_local;
-   int len;
 } icedemo;
 
 
 static int  UDPCreate(){
    int sfd;
+   struct sockaddr_in addr_server,addr_local;
+   int len=sizeof(struct sockaddr);
    int sent,on=1;
   
-   icedemo.len=sizeof(struct sockaddr);
+
    //icedemo_stop_session(); 
    sfd=socket(AF_INET,SOCK_DGRAM,0);
    if(sfd==-1){
@@ -40,26 +39,24 @@ static int  UDPCreate(){
        return ;
    }
    setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR | SO_BROADCAST,&on,sizeof(on)); 
-   memset(&icedemo.addr_server,0,icedemo.len);
-   icedemo.addr_server.sin_family=AF_INET;
-   icedemo.addr_server.sin_addr.s_addr=inet_addr(icedemo.ripaddr); 
-   icedemo.addr_server.sin_port=htons(icedemo.rport);
+   memset(&addr_server,0,len);
+   addr_server.sin_family=AF_INET;
+   addr_server.sin_addr.s_addr=inet_addr(icedemo.ripaddr); 
+   addr_server.sin_port=htons(icedemo.rport);
 
-   memset(&icedemo.addr_local,0,icedemo.len);
-   icedemo.addr_local.sin_family=AF_INET;
-   icedemo.addr_local.sin_addr.s_addr=inet_addr(icedemo.lipaddr); 
-   icedemo.addr_local.sin_port=htons(icedemo.lport);
+   memset(&addr_local,0,len);
+   addr_local.sin_family=AF_INET;
+   addr_local.sin_addr.s_addr=inet_addr(icedemo.lipaddr); 
+   addr_local.sin_port=htons(icedemo.lport);
   
-   if(bind(sfd,(struct sockaddr*)&icedemo.addr_local,icedemo.len)==-1){
+   if(bind(sfd,(struct sockaddr*)&addr_local,len)==-1){
     perror("BIND");
     return ;
-    } 
-   /* 
+    }  
     if(connect(sfd,(struct sockaddr*)&addr_server,len)==-1){
      perror("CONNECT");
      return ;
    }
-   */
    printf("OUR OWN UDP SOCKET CREATED:%d\n",sfd);
     return sfd;
 }
@@ -83,13 +80,8 @@ static void* UDPRecvThread(void* arg){
   printf("UDPRecvThread CREATED\n");
   char buffer[1024];
   int n;
-  struct sockaddr_in addr;
-  int addr_len=sizeof(struct sockaddr_in);
   for(;;){
-    //n=read(icedemo.localfd,buffer,sizeof(buffer));
-    n=recvfrom(icedemo.localfd,buffer,sizeof(buffer), 0 , (struct sockaddr *)&icedemo.addr_server ,&addr_len);   
-    printf("receive from %s:%d\n" , inet_ntoa( icedemo.addr_server.sin_addr),ntohs(icedemo.addr_server.sin_port));
-    buffer[n]='\0';
+    n=read(icedemo.localfd,buffer,sizeof(buffer));
     printf("read %d bytes,data:%s\n",n,buffer); 
   
   }
@@ -104,15 +96,19 @@ static void* UDPSendThread(void* arg){
    for(;;){
    gets(&buffer); 
    n=strlen(buffer);
-   //n=write(icedemo.localfd,buffer,n);
-   n=sendto(icedemo.localfd,buffer,n,0,(struct sockaddr*)&icedemo.addr_server,icedemo.len);
+   n=write(icedemo.localfd,buffer,n);
    printf("%d byte to send,%d bytes sent\n",strlen(buffer),n);
   }
   
 
 }
 
-
+/**
+ *arg1=local addr
+ *arg2=local port
+ *arg3=remote addr
+ *argv4=remote port
+**/
 int main(int argc,char* argv[]){
     sprintf(icedemo.lipaddr,"%s",argv[1]);
     icedemo.lport=atoi(argv[2]);
